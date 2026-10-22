@@ -1,3 +1,7 @@
+# Built from the same POSTGRES_* values as the db service, so there is one source of truth.
+x-database-url: &database-url
+  DATABASE_URL: postgresql://${POSTGRES_USER:-tally}:${POSTGRES_PASSWORD:-tally_dev}@db:5432/${POSTGRES_DB:-tally}
+
 services:
   db:
     image: postgres:17
@@ -14,6 +18,26 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+
+  # One-off job: applies migrations, then exits.
+  migrate:
+    build: .
+    command: ["alembic", "upgrade", "head"]
+    environment: *database-url
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment: *database-url
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   pgdata:
