@@ -49,3 +49,12 @@ Date: 2026-10-19
 **Why:** The SQL is visible and easy to test and explain. psycopg 3 supports parameterized queries, explicit transactions, row factories (`dict_row`, `class_row`), JSONB handling, and pooling (`psycopg_pool`). It supports sync and async, so I can switch later, and it's the same driver Alembic uses through `postgresql+psycopg`.
 **Tradeoffs:** SQL lives in strings, so mistakes appear at runtime, not at lint time. I map rows to objects myself, and boilerplate grows with the number of queries. I must always use parameter placeholders and never build SQL with f-strings (SQL injection). Pool and transaction handling is my job.
 **Revisit when:** repetitive CRUD code piles up, at which point SQLAlchemy Core could cut boilerplate.
+
+## 007: Sync route handlers (`def`) over async
+Date: 2026-10-21
+**Context:** FastAPI runs `async def` routes on the event loop and plain `def` routes in a threadpool. My database layer (`connect()`, `insert_run`, the test fixtures) is synchronous psycopg.
+**Decision:** Plain `def` route handlers with sync psycopg.
+**Alternatives considered:** `async def` routes with psycopg's `AsyncConnection` (far higher concurrency ceiling, but it means rewriting the db layer and fixtures, and one blocking call inside an `async def` freezes every request).
+**Why:** The existing code is sync, and FastAPI contains blocking calls in worker threads (about 40 by default), which is well above the load of a personal logger with a handful of users. Blocking is hard to get wrong this way.
+**Tradeoffs:** The ceiling is about 40 simultaneous requests, and each request waiting on the database or an external API holds a thread. Moving to async later means changing the db layer and tests together.
+**Revisit when:** the app grows past what the threadpool can handle, or I need to call external APIs (Telegram, Strava, the LLM) in parallel within one request.
