@@ -38,3 +38,10 @@ def health(conn: Annotated[psycopg.Connection, Depends(get_conn)]) -> dict[str, 
         return {"status": "ok"}
     except psycopg.Error:
         raise HTTPException(status_code=503, detail="Server is down")
+
+
+@app.get("/healthz")
+def healthz() -> dict[str, str]:
+    """Liveness: the process is up. Deliberately no database access, so platform
+    health checks polling this route don't keep the database awake."""
+    return {"status": "ok"}
