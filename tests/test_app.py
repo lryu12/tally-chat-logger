@@ -35,6 +35,20 @@ def test_health_returns_ok(client):
     assert response.json() == {"status": "ok"}
 
 
+def test_healthz_ok_even_when_database_is_down(client):
+    # Liveness must not depend on the database; if it did, this would be a 503.
+    def unreachable():
+        raise psycopg.OperationalError("connection refused")
+        yield
+
+    app.dependency_overrides[get_conn] = unreachable
+
+    response = client.get("/healthz")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
 def test_health_returns_503_when_database_unreachable(client):
     def unreachable():
         raise psycopg.OperationalError("connection refused")
