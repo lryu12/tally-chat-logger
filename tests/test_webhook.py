@@ -1,10 +1,25 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from tally_chat_logger import app as app_module
 from tally_chat_logger.app import app, get_conn
+from tally_chat_logger.telegram import TelegramSendError
 
 SECRET = "test-secret"
 SENDER_ID = 424242  # differs from the user_id fixture's 787878 in conftest
+
+
+@pytest.fixture(autouse=True)
+def sent_replies(monkeypatch):
+    """Record replies instead of calling Telegram; autouse so no test can reach it."""
+    replies = []
+    # Patch the name where the route looks it up: in the app module.
+    monkeypatch.setattr(
+        app_module,
+        "send_message",
+        lambda chat_id, text: replies.append((chat_id, text)),
+    )
+    return replies
 
 
 @pytest.fixture
@@ -151,3 +166,66 @@ def test_webhook_reuses_existing_user_for_later_messages(webhook_client, conn):
     assert count_users(conn) == 1
     assert count_messages(conn, "424242:42") == 1
     assert count_messages(conn, "424242:43") == 1
+
+
+def test_webhook_replies_saved_to_the_chat(webhook_client, sent_replies):
+    post(webhook_client, make_update())
+
+    assert sent_replies == [(SENDER_ID, "Saved")]
+
+
+def test_webhook_replies_again_on_duplicate_delivery(webhook_client, sent_replies):
+    post(webhook_client, make_update())
+    post(webhook_client, make_update())
+
+    assert sent_replies == [(SENDER_ID, "Saved")] * 2
+
+
+def _update_without_text():
+    update = make_update()
+    del update["message"]["text"]
+    return update
+
+
+@pytest.mark.parametrize(
+    "update",
+    [
+        pytest.param(make_update(**{"from": {"id": 999}}), id="not_allowlisted"),
+        pytest.param(make_update(key="edited_message"), id="edited_message"),
+        pytest.param(_update_without_text(), id="no_text"),
+    ],
+)
+def test_webhook_sends_no_reply_for_ignored_updates(
+    webhook_client, sent_replies, update
+):
+    post(webhook_client, update)
+
+    assert sent_replies == []
+
+
+def test_webhook_sends_no_reply_when_unauthorized(webhook_client, sent_replies):
+    post(webhook_client, make_update(), secret="not-the-secret")
+
+    assert sent_replies == []
+
+
+def test_webhook_failed_reply_returns_502_and_retry_replies(
+    webhook_client, conn, sent_replies, monkeypatch
+):
+    attempts = []
+
+    def flaky_send(chat_id, text):
+        attempts.append(chat_id)
+        if len(attempts) == 1:
+            raise TelegramSendError("Telegram returned 500")
+        sent_replies.append((chat_id, text))
+
+    monkeypatch.setattr(app_module, "send_message", flaky_send)
+
+    first = post(webhook_client, make_update())
+    retry = post(webhook_client, make_update())  # Telegram redelivering after the 502
+
+    assert first.status_code == 502
+    assert retry.status_code == 200
+    assert sent_replies == [(SENDER_ID, "Saved")]  # only the retry's reply got out
+    assert count_messages(conn) == 1  # saved once, despite the failed first reply

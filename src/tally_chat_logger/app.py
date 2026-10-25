@@ -9,6 +9,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from tally_chat_logger.db import connect
+from tally_chat_logger.telegram import TelegramSendError, send_message
 
 logger = logging.getLogger(__name__)
 
@@ -107,5 +108,13 @@ def telegram_webhook(
             """,
             (user["id"], f"{chat_id}:{message_id}", text),
         )
+
+    # After the commit, so we never say "Saved" for something that isn't. Runs on
+    # every delivery, duplicates included, so a retry re-attempts a failed reply.
+    try:
+        send_message(chat_id, "Saved")
+    except TelegramSendError as exc:
+        logger.error("reply to %s:%s failed", chat_id, message_id, exc_info=exc)
+        raise HTTPException(status_code=502, detail="Reply failed")
 
     return {"ok": True}
