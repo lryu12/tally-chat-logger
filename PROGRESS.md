@@ -1,7 +1,7 @@
 # Progress
 
 ## Current focus
-Phase 1, Step 4: idempotent insert_run
+Phase 2, Step 1: Telegram bot stores raw messages
 
 ## Phases
 ### Phase 0: Setup
@@ -17,9 +17,9 @@ Phase 1, Step 4: idempotent insert_run
 - [x] Migration 0001: users, raw_messages, activities, runs
 - [x] insert_run (idempotent, one transaction)
 - [x] Tests: duplicate insert, bad data rejected, rollback on failure
-- [ ] FastAPI /health endpoint that checks the database
-- [ ] Dockerfile, CI Postgres service
-- [ ] Deploy
+- [x] FastAPI /health endpoint that checks the database
+- [x] Dockerfile, CI Postgres service
+- [x] Deploy
 
 ### Phase 2: Chat logging for lifts
 - [ ] Telegram bot stores raw messages
