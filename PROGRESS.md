@@ -1,7 +1,7 @@
 # Progress
 
 ## Current focus
-Phase 2, Step 1: Telegram bot stores raw messages
+Phase 2, Step 2: LLM parser with schema validation and confirm buttons (design first)
 
 ## Phases
 ### Phase 0: Setup
@@ -22,7 +22,8 @@ Phase 2, Step 1: Telegram bot stores raw messages
 - [x] Deploy
 
 ### Phase 2: Chat logging for lifts
-- [ ] Telegram bot stores raw messages
+- [x] Telegram webhook stores raw messages (secret header, allowlist, idempotent; DECISIONS 009)
+- [x] Bot replies "Saved" after storing (DECISIONS 010; confirmed live: reply received, row in Neon)
 - [ ] LLM parser with schema validation and confirm buttons
 - [ ] Lift tables migration
 - [ ] Eval set (30-50 messages) and accuracy number
@@ -37,7 +38,11 @@ Phase 2, Step 1: Telegram bot stores raw messages
 ### Phase 10: Brand work (Notion adapter)
 
 ## Open questions
-(none yet)
+- Real Render cold start time (not yet measured; record in DECISIONS 008)
+- Neon's policy for inactive free projects (unverified)
+- No pg_dump backup yet
+- /start and other bot commands land in raw_messages as pending; the parser must skip them
 
 ## Log
 - 2026-10-21: created this file
+- 2026-10-27: webhook stores raw messages and replies "Saved" on Render + Neon
