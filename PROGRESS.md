@@ -1,7 +1,7 @@
 # Progress
 
 ## Current focus
-Phase 2, Step 2: LLM parser with schema validation and confirm buttons (design first)
+Phase 2, Step 2: LLM parser, starting with its output schema (what JSON the model must return)
 
 ## Phases
 ### Phase 0: Setup
@@ -25,7 +25,7 @@ Phase 2, Step 2: LLM parser with schema validation and confirm buttons (design f
 - [x] Telegram webhook stores raw messages (secret header, allowlist, idempotent; DECISIONS 009)
 - [x] Bot replies "Saved" after storing (DECISIONS 010; confirmed live: reply received, row in Neon)
 - [ ] LLM parser with schema validation and confirm buttons
-- [ ] Lift tables migration
+- [x] Lift tables migration (exercises + lift_sets; set_index counts per exercise)
 - [ ] Eval set (30-50 messages) and accuracy number
 
 ### Phase 3: Backfill from notes
@@ -46,3 +46,4 @@ Phase 2, Step 2: LLM parser with schema validation and confirm buttons (design f
 ## Log
 - 2026-10-21: created this file
 - 2026-10-27: webhook stores raw messages and replies "Saved" on Render + Neon
+- 2026-10-28: lift tables migration merged and applied to Neon
